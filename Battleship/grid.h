@@ -1,35 +1,68 @@
 #pragma once
 
-#include "gamemaster.h"
+#include "GameMaster.h"
 
-class Grid {
-public:
-    const int defaultGridSize{ 10 };
-    Vector2 size;
+namespace Battleship {
+	class Grid {
+	public:
+		int guessedHits{ 0 }, tilesSunk{ 0 };
+		const int defaultGridSize{ 10 };
+		Vector2 cursorPosition;
+		std::vector<std::vector<std::string>> m_xy;
+		GUIText name;
 
-    Grid() {
-        size.x = size.y = defaultGridSize;
-        CreateGrids();
-    }
+		Grid() {
+			size.x = size.y = defaultGridSize;
+		}
 
-    void PlayerBounds(Vector2* position, const Boat* boatType, bool* vertical, bool holdingBoat);
-    void InsertBoat(Vector2* position, const Boat* boatType, bool* vertical);
+		void PlayerBounds();
+		void PlayerBounds(const Boat*, bool*, bool);
+		void InsertBoat(const Boat*, bool*);
 
-    void CreateGrids();
-    // reset the entire grid. Called when player wants a rematch or is not happy with their boat placement
-    void ClearGrid();
+		// these two methods are virtual due to m_enemyGrid in the Player class
+		virtual void CreateGrids(int, int);
+		virtual void ClearGrid();
 
-    // send in the coordinates of the attacked cell, and send back if it was a hit or not
-    std::string ReceveAttack(Vector2* p_pos);
+		// send in the coordinates of the attacked cell, and send back if it was a hit or not
+		std::string ReceveAttack(Vector2*);
+		std::vector<std::vector<std::string>>* get_gridChars();
 
-    // this function is only for the player "ingame" function call
-    void DrawGridInGame(int x, int y) const;
+		virtual ~Grid() {
+			// do stuff here when the extended class is deconstructded
+		}
 
-    // this is only for the player before the game starts, this has all the functionallity
-    // for drawing the placement of the boats
-    bool DrawGrid(const Vector2* p_currentPos, const Boat* p_boat, bool* p_vertical) const;
-private:
-    //short m_maxHeight{ 25 }, m_maxWidth{ 25 };
-    std::vector<std::vector<std::string>> m_xy;
-    std::vector<std::vector<std::string>> m_enemyGrid;
-};
+	protected:
+		Vector2 size;
+	private:
+		const short m_maxHeight{ 25 }, m_maxWidth{ 25 };
+	};
+
+	class Player : public Grid {
+	public:
+		std::vector<std::vector<std::string>> m_enemyGrid;
+
+		Player() : Grid() {
+			size.x = size.y = defaultGridSize;
+			name.text = " -Player- ";
+		}
+
+		void CreateGrids(int, int) override;
+		void ClearGrid() override;
+
+		// this is only for the player before the game starts, this has all the functionallity
+		// for drawing the placement of the boats
+		bool DrawGrid(const Boat*, bool*) const;
+		void wDrawGrid(short, short, std::vector<std::vector<std::string>>, const Vector2* = nullptr) const;
+	};
+
+	class AI : public Grid {
+	public:
+		AI() : Grid() {
+			size.x = size.y = defaultGridSize;
+			name.text = " -Computer- ";
+		}
+
+		void RandomGuess(int, int);
+		bool InsertBoat(const Boat*, bool*);
+	};
+}

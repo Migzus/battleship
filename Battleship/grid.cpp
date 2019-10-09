@@ -1,126 +1,229 @@
-#include "grid.h"
+#include "Grid.h"
 
-void Grid::PlayerBounds(Vector2* position, const Boat* boatType, bool* vertical, bool holdingBoat) {
-    clamp(&position->x, 0, size.x - (holdingBoat ? *vertical ? boatType->get_Length() : 1 : 1));
-    clamp(&position->y, 0, size.y - (holdingBoat ? *vertical ? 1 : boatType->get_Length() : 1));
-}
+namespace Battleship {
+	void Grid::PlayerBounds() {
+		clamp(&cursorPosition.x, 0, size.x - 1);
+		clamp(&cursorPosition.y, 0, size.y - 1);
+	}
 
-void Grid::InsertBoat(Vector2* position, const Boat* boatType, bool* vertical) {
-    for (int i{ 0 }; i < boatType->get_Length(); i++) {
-        m_xy[size_t(position->x + (*vertical ? i : 0))][size_t(position->y + (*vertical ? 0 : i))] = boatType->get_Icon();
-    }
-}
+	void Grid::PlayerBounds(const Boat* boatType, bool* vertical, bool holdingBoat) {
+		clamp(&cursorPosition.x, 0, size.x - (holdingBoat ? *vertical ? boatType->get_Length() : 1 : 1));
+		clamp(&cursorPosition.y, 0, size.y - (holdingBoat ? *vertical ? 1 : boatType->get_Length() : 1));
+	}
 
-void Grid::CreateGrids() {
-    std::vector<std::string> _currentList;
+	void Grid::InsertBoat(const Boat* p_boatType, bool* p_vertical) {
+		for (int i{ 0 }; i < p_boatType->get_Length(); i++) {
+			m_xy[size_t(cursorPosition.x + (*p_vertical ? i : 0))][size_t(cursorPosition.y + (*p_vertical ? 0 : i))] = p_boatType->get_Icon();
+		}
+	}
 
-    m_xy.clear();
-    m_enemyGrid.clear();
+	void Grid::CreateGrids(int width, int height) {
+		std::vector<std::string> _currentList;
 
-    for (int y{ 0 }; y < size.y; y++) {
-        _currentList.push_back(" ");
-    }
+		m_xy.clear();
 
-    for (int x{ 0 }; x < size.x; x++) {
-        m_xy.push_back(_currentList);
-        m_enemyGrid.push_back(_currentList);
-    }
-}
+		size.y = height;
+		size.x = width;
 
-void Grid::ClearGrid() {
-    for (unsigned short x{ 0 }; x < size.x; x++) {
-        for (unsigned short y{ 0 }; y < size.y; y++) {
-            m_xy[x][y] = " ";
-        }
-    }
-}
+		for (int y{ 0 }; y < size.y; y++) {
+			_currentList.push_back(" ");
+		}
 
-std::string Grid::ReceveAttack(Vector2* p_pos) {
-    std::string _gridPos = m_xy[size_t(p_pos->x)][size_t(p_pos->y)];
+		for (int x{ 0 }; x < size.x; x++) {
+			m_xy.push_back(_currentList);
+		}
+	}
 
-    if (_gridPos == " ") {
-        _gridPos = "≈";
-        return "≈";
-    }
-    else {
-        _gridPos = "x";
-        return "x";
-    }
-}
+	void Grid::ClearGrid() {
+		for (unsigned short x{ 0 }; x < size.x; x++) {
+			for (unsigned short y{ 0 }; y < size.y; y++) {
+				m_xy[x][y] = " ";
+			}
+		}
+	}
 
-void Grid::DrawGridInGame(int x, int y) const {
+	std::string Grid::ReceveAttack(Vector2* p_pos) {
+		std::string _gridPos = m_xy[size_t(p_pos->x)][size_t(p_pos->y)];
 
-}
+		if (_gridPos == " ") {
+			_gridPos = "≈";
+		}
+		else {
+			_gridPos = "x";
+		}
 
-bool Grid::DrawGrid(const Vector2* p_currentPos, const Boat* p_boat, bool* p_vertical) const {
-    bool _retVal{ true };
-    int _count{ 0 };
+		return _gridPos;
+	}
 
-    printf("   %s", CYAN);
+	std::vector<std::vector<std::string>>* Grid::get_gridChars() {
+		return &m_xy;
+	}
 
-    for (unsigned short y{ 0 }; y < size.y; y++) {
-        printf(" %i", y);
-    }
+	void Player::CreateGrids(int width, int height) {
+		std::vector<std::string> _currentList;
 
-    printf("\n  ┏");
+		m_xy.clear();
+		m_enemyGrid.clear();
 
-    for (unsigned short x{ 0 }; x < size.x; x++) {
-        std::cout << (p_currentPos->x == x ? "━┷" : "━━");
-    }
+		size.y = height;
+		size.x = width;
 
-    for (unsigned short y{ 0 }; y < size.y; y++) {
-        char _char = char(65 + y);
+		for (int y{ 0 }; y < size.y; y++) {
+			_currentList.push_back(" ");
+		}
 
-        std::cout << '\n' << _char << (p_currentPos->y == y ? "╶┨" : " ┃");
-    }
+		for (int x{ 0 }; x < size.x; x++) {
+			m_xy.push_back(_currentList);
+			m_enemyGrid.push_back(_currentList);
+		}
+	}
 
-    std::cout << MAGENTA;
+	void Player::ClearGrid() {
+		for (unsigned short x{ 0 }; x < size.x; x++) {
+			for (unsigned short y{ 0 }; y < size.y; y++) {
+				m_xy[x][y] = m_enemyGrid[x][y] = " ";
+			}
+		}
+	}
 
-    for (unsigned short y{ 0 }; y < size.y; y++) {
-        gotoxy(3, short(y) + 2);
+	void Player::wDrawGrid(short posX, short posY, std::vector<std::vector<std::string>> gridContent, const Vector2* currentPos) const {
+		std::cout << CYAN;
 
-        for (unsigned short x{ 0 }; x < size.x; x++) {
-            // print the player (As a "layer" on top of the grid)
-            if (p_currentPos->x == x && p_currentPos->y == y) {
-                if (p_boat->amount <= 0) {
-                    printf(" +");
-                }
-                else {
-                    if (m_xy[x][y] != " ") {
-                        std::cout << RED << " X" << MAGENTA;
-                        _retVal = false;
-                    }
-                    else {
-                        std::cout << ' ' << p_boat->get_Icon();
-                    }
-                    _count++;
-                }
-            }
-            else if (p_currentPos->y == y && _count > 0 && _count < p_boat->get_Length() && *p_vertical) {
-                if (m_xy[x][y] != " ") {
-                    std::cout << RED << " X" << MAGENTA;
-                    _retVal = false;
-                }
-                else {
-                    std::cout << ' ' << p_boat->get_Icon();
-                }
-                _count++;
-            }
-            else if (p_currentPos->x == x && _count > 0 && _count < p_boat->get_Length() && !*p_vertical) {
-                if (m_xy[x][y] != " ") {
-                    std::cout << RED << " X" << MAGENTA;
-                    _retVal = false;
-                }
-                else {
-                    std::cout << ' ' << p_boat->get_Icon();
-                }
-                _count++;
-            }
-            else {
-                std::cout << " " << m_xy[x][y];
-            }
-        }
-    }
+		for (int x{ 0 }; x < size.x; x++) {
+			gotoxy(posX + 4 + short(x) * 2, posY);
+			std::cout << x;
+		}
 
-    return _retVal;
+		gotoxy(posX + 2, posY + 1);
+		std::cout << "┏";
+
+		for (unsigned short x{ 0 }; x < size.x; x++) {
+			std::cout << "━━";
+		}
+
+		for (unsigned short y{ 0 }; y < size.y; y++) {
+			char _char = char(65 + y);
+
+			gotoxy(posX, posY + y + 2);
+			std::cout << _char << " ┃";
+		}
+
+		std::cout << WHITE;
+
+		for (unsigned short y{ 0 }; y < size.y; y++) {
+			gotoxy(posX + 3, posY + short(y) + 2);
+
+			for (unsigned short x{ 0 }; x < size.x; x++) {
+				if (gridContent[x][y] == "≈") {
+					std::cout << BLUE;
+				}
+				else if (gridContent[x][y] == "x") {
+					std::cout << RED;
+				}
+
+				if (currentPos) {
+					if (currentPos->x == x && currentPos->y == y) {
+						std::cout << " +" << WHITE;
+
+						continue;
+					}
+				}
+
+				std::cout << ' ' << gridContent[x][y] << WHITE;
+			}
+		}
+	}
+
+	bool Player::DrawGrid(const Boat* p_boat, bool* p_vertical) const {
+		bool _retVal{ true };
+		int _count{ 0 };
+
+		std::cout << CYAN;
+
+		for (int x{ 0 }; x < size.x; x++) {
+			gotoxy(4 + short(x) * 2, 0);
+			std::cout << x;
+		}
+
+		std::cout << "\n  ┏";
+
+		for (unsigned short x{ 0 }; x < size.x; x++) {
+			std::cout << (cursorPosition.x == x ? "━┷" : "━━");
+		}
+
+		for (unsigned short y{ 0 }; y < size.y; y++) {
+			char _char = char(65 + y);
+
+			std::cout << '\n' << _char << (cursorPosition.y == y ? "╶┨" : " ┃");
+		}
+
+		std::cout << WHITE;
+
+		for (unsigned short y{ 0 }; y < size.y; y++) {
+			gotoxy(3, short(y) + 2);
+
+			for (unsigned short x{ 0 }; x < size.x; x++) {
+				// print the player (As a "layer" on top of the grid)
+				if (cursorPosition.x == x && cursorPosition.y == y) {
+					if (p_boat->amount <= 0) {
+						std::cout << " +";
+					}
+					else {
+						if (m_xy[x][y] != " ") {
+							std::cout << RED << " X" << WHITE;
+							_retVal = false;
+						}
+						else {
+							std::cout << ' ' << p_boat->get_Icon();
+						}
+						_count++;
+					}
+				}
+				else if (cursorPosition.y == y && _count > 0 && _count < p_boat->get_Length() && *p_vertical) {
+					if (m_xy[x][y] != " ") {
+						std::cout << RED << " X" << WHITE;
+						_retVal = false;
+					}
+					else {
+						std::cout << ' ' << p_boat->get_Icon();
+					}
+					_count++;
+				}
+				else if (cursorPosition.x == x && _count > 0 && _count < p_boat->get_Length() && !*p_vertical) {
+					if (m_xy[x][y] != " ") {
+						std::cout << RED << " X" << WHITE;
+						_retVal = false;
+					}
+					else {
+						std::cout << ' ' << p_boat->get_Icon();
+					}
+					_count++;
+				}
+				else {
+					std::cout << ' ' << m_xy[x][y];
+				}
+			}
+		}
+
+		return _retVal;
+	}
+
+	void AI::RandomGuess(int clampedX, int clampedY) {
+		cursorPosition.x = rand() % clampedX;
+		cursorPosition.y = rand() % clampedY;
+	}
+
+	bool AI::InsertBoat(const Boat* p_boatType, bool* p_vertical) {
+		for (int i{ 0 }; i < p_boatType->get_Length(); i++) {
+			if (m_xy[size_t(cursorPosition.x + (*p_vertical ? i : 0))][size_t(cursorPosition.y + (*p_vertical ? 0 : i))] != " ") {
+				return true;
+			}
+		}
+
+		for (int i{ 0 }; i < p_boatType->get_Length(); i++) {
+			m_xy[size_t(cursorPosition.x + (*p_vertical ? i : 0))][size_t(cursorPosition.y + (*p_vertical ? 0 : i))] = p_boatType->get_Icon();
+		}
+
+		return false;
+	}
 }

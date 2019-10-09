@@ -1,22 +1,38 @@
-#include "gamemaster.h"
+#include "GameMaster.h"
 
-void gotoxy(short x, short y) {
-    static HANDLE _h = nullptr;
+namespace Battleship {
+	void HideCursor()
+	{
+		HANDLE consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+		CONSOLE_CURSOR_INFO info;
+		info.dwSize = 100;
+		info.bVisible = false;
+		SetConsoleCursorInfo(consoleHandle, &info);
+	}
 
-    if (!_h) {
-        _h = GetStdHandle(STD_OUTPUT_HANDLE);
-    }
+	void gotoxy(short x, short y) {
+		static HANDLE _h = nullptr;
 
-    COORD _c = { x, y };
-    SetConsoleCursorPosition(_h, _c);
-}
+		if (!_h) {
+			_h = GetStdHandle(STD_OUTPUT_HANDLE);
+		}
 
-void ClearScreen() {
+		COORD _c = { x, y };
+		SetConsoleCursorPosition(_h, _c);
+	}
+
+	void ClearScreen() {
 #ifdef _WIN32
-    // Run this code, only on Windows
-    std::system("cls");
+		// Run this code, only on Windows
+		std::system("cls");
 #else
-    // Otherwise I assume it is a Linux/UNIX based system
-    std::system("clear");
+		// Otherwise I assume it is a Linux/UNIX based system
+		std::system("clear");
 #endif
+	}
+
+	void GUIText::DrawText(std::string color, std::string defColor) {
+		gotoxy(position.x, position.y);
+		std::cout << color + text + defColor;
+	};
 }
